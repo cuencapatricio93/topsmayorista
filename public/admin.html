@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Tops Mayorista</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --orange: #e58e55; --black: #000; --dark: #3F3D38;
+      --muted: #888; --border: #e5e5e5; --soft: #f9f7f5;
+      --green: #27ae60; --red: #e74c3c;
+    }
+    body { font-family: 'Montserrat', sans-serif; background: var(--soft); color: var(--dark); min-height: 100vh; }
+
+    /* LOCK */
+    #lock { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 999; }
+    #lock-box { background: #fff; padding: 44px 36px; width: 340px; text-align: center; }
+    .lock-logo { font-size: 1.4rem; font-weight: 700; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 4px; }
+    .lock-sub  { font-size: .72rem; color: var(--orange); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 28px; }
+    #lock input { width: 100%; padding: 12px 14px; border: 1px solid var(--border); font-family: 'Montserrat', sans-serif; font-size: .9rem; outline: none; margin-bottom: 10px; }
+    #lock input:focus { border-color: var(--dark); }
+    #lock .btn-main { width: 100%; }
+    #lock-error { color: var(--red); font-size: .78rem; margin-top: 8px; display: none; }
+
+    /* LAYOUT */
+    header {
+      background: var(--dark); color: #fff;
+      padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    }
+    .logo { font-size: 1.2rem; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
+    .logo span { color: var(--orange); font-size: .7rem; font-weight: 500; letter-spacing: 1px; display: block; margin-top: 2px; }
+    .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+    .btn-main {
+      padding: 10px 20px; background: var(--orange); color: #fff; border: none;
+      font-family: 'Montserrat', sans-serif; font-size: .72rem; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: opacity .2s;
+    }
+    .btn-main:hover { opacity: .85; }
+    .btn-main.black { background: var(--black); }
+    .btn-main.green { background: var(--green); }
+    .btn-main:disabled { background: #ccc; cursor: not-allowed; }
+
+    main { max-width: 960px; margin: 32px auto; padding: 0 20px 60px; }
+
+    /* STATS BAR */
+    .stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+    .stat-card { background: #fff; border: 1px solid var(--border); padding: 16px 20px; flex: 1; min-width: 140px; }
+    .stat-card .val { font-size: 1.4rem; font-weight: 700; color: var(--orange); }
+    .stat-card .lbl { font-size: .68rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+
+    /* STATUS BAR */
+    #status-bar {
+      padding: 10px 16px; margin-bottom: 20px; font-size: .8rem; font-weight: 600;
+      display: none; border-left: 3px solid var(--orange);
+    }
+    #status-bar.ok  { background: #f0faf3; border-color: var(--green); color: var(--green); display: block; }
+    #status-bar.err { background: #fdf0f0; border-color: var(--red);   color: var(--red);   display: block; }
+    #status-bar.inf { background: #fff8f0; border-color: var(--orange); color: var(--orange); display: block; }
+
+    /* TABLA */
+    .table-wrap { background: #fff; border: 1px solid var(--border); overflow-x: auto; }
+    .table-header {
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    }
+    .table-header h2 { font-size: .72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      font-size: .65rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--muted); padding: 10px 14px; text-align: left;
+      border-bottom: 2px solid var(--border); background: var(--soft); white-space: nowrap;
+    }
+    td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: .82rem; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fdfcfa; }
+
+    .product-thumb { width: 48px; height: 48px; object-fit: cover; display: block; }
+    .product-name  { font-weight: 600; }
+    .product-vars  { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+    .retail-price  { color: var(--muted); font-size: .8rem; }
+
+    .price-input {
+      width: 130px; padding: 8px 10px; border: 1.5px solid var(--border);
+      font-family: 'Montserrat', sans-serif; font-size: .88rem; font-weight: 600;
+      outline: none; transition: border-color .15s; text-align: right;
+      -moz-appearance: textfield;
+    }
+    .price-input::-webkit-outer-spin-button,
+    .price-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .price-input:focus { border-color: var(--orange); }
+    .price-input.set   { border-color: var(--green); background: #f0faf3; }
+    .price-input.unset { border-color: #f0b490; background: #fff8f0; }
+
+    .no-price { font-size: .72rem; color: var(--red); font-weight: 600; }
+    .has-price { font-size: .72rem; color: var(--green); font-weight: 600; }
+
+    #loading {
+      text-align: center; padding: 48px; color: var(--muted);
+      font-size: .82rem; letter-spacing: 1px; text-transform: uppercase;
+    }
+    .spinner {
+      display: inline-block; width: 20px; height: 20px;
+      border: 2px solid var(--border); border-top-color: var(--orange);
+      border-radius: 50%; animation: spin .7s linear infinite; margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* SYNC NOTE */
+    .sync-note { font-size: .72rem; color: var(--muted); margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock">
+  <div id="lock-box">
+    <div class="lock-logo">Tops</div>
+    <div class="lock-sub">Panel Admin</div>
+    <input type="password" id="pwd" placeholder="Contraseña admin" />
+    <button class="btn-main" onclick="login()">Entrar</button>
+    <div id="lock-error">Contraseña incorrecta.</div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">Tops <span>Admin — Precios Mayoristas</span></div>
+  <div class="header-actions">
+    <button class="btn-main" onclick="syncProducts()" id="btn-sync">↻ Sincronizar productos</button>
+    <button class="btn-main green" onclick="savePrices()" id="btn-save">✓ Guardar precios</button>
+  </div>
+</header>
+
+<main>
+  <div id="status-bar"></div>
+
+  <div class="stats">
+    <div class="stat-card"><div class="val" id="stat-total">—</div><div class="lbl">Productos</div></div>
+    <div class="stat-card"><div class="val" id="stat-priced">—</div><div class="lbl">Con precio</div></div>
+    <div class="stat-card"><div class="val" id="stat-missing">—</div><div class="lbl">Sin precio</div></div>
+  </div>
+
+  <!-- CONDICIONES -->
+  <div class="table-wrap" style="margin-bottom:24px">
+    <div class="table-header">
+      <h2>Condiciones mayoristas</h2>
+      <button class="btn-main green" onclick="saveConditions()">✓ Guardar condiciones</button>
+    </div>
+    <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px" id="conditions-form">
+      <div class="form-row"><label>💳 Pago</label><input type="text" id="c-pago" /></div>
+      <div class="form-row"><label>📦 Envío</label><input type="text" id="c-envio" /></div>
+      <div class="form-row"><label>🛍️ Pedido mínimo</label><input type="text" id="c-minimo" /></div>
+      <div class="form-row"><label>🚚 Entrega</label><input type="text" id="c-entrega" /></div>
+      <div class="form-row" style="grid-column:1/-1"><label>📝 Nota al pie</label><input type="text" id="c-nota" /></div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-header">
+      <h2>Todos los productos</h2>
+      <div class="sync-note" id="sync-note"></div>
+    </div>
+    <div id="loading"><span class="spinner"></span>Cargando productos...</div>
+    <table id="products-table" style="display:none">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Producto</th>
+          <th>Precio minorista</th>
+          <th>Precio mayorista</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+  let adminPassword = "";
+  let products      = [];
+  let prices        = {};
+
+  // ── LOGIN ──
+  function login() {
+    const pwd = document.getElementById("pwd").value;
+    fetch("/api/auth/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pwd }),
+    }).then(r => {
+      if (r.ok) {
+        adminPassword = pwd;
+        document.getElementById("lock").style.display = "none";
+        loadData();
+      } else {
+        document.getElementById("lock-error").style.display = "block";
+      }
+    });
+  }
+  document.getElementById("pwd").addEventListener("keydown", e => {
+    if (e.key === "Enter") login();
+  });
+
+  // ── CARGAR DATOS ──
+  async function loadData() {
+    try {
+      const [prodRes, priceRes, condRes] = await Promise.all([
+        fetch("/api/products"),
+        fetch("/api/prices"),
+        fetch("/api/conditions"),
+      ]);
+      products = await prodRes.json();
+      prices   = await priceRes.json();
+      const cond = await condRes.json();
+      renderTable();
+      loadConditions(cond);
+    } catch (e) {
+      showStatus("Error al cargar datos: " + e.message, "err");
+    }
+  }
+
+  // ── CONDICIONES ──
+  function loadConditions(c) {
+    ["pago","envio","minimo","entrega","nota"].forEach(k => {
+      const el = document.getElementById(`c-${k}`);
+      if (el) el.value = c[k] || "";
+    });
+  }
+
+  async function saveConditions() {
+    const conditions = {};
+    ["pago","envio","minimo","entrega","nota"].forEach(k => {
+      conditions[k] = document.getElementById(`c-${k}`)?.value.trim() || "";
+    });
+    try {
+      const res = await fetch("/api/conditions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: adminPassword, conditions }),
+      });
+      if (res.ok) showStatus("✓ Condiciones guardadas", "ok");
+      else showStatus("Error al guardar condiciones", "err");
+    } catch (e) {
+      showStatus("Error de conexión: " + e.message, "err");
+    }
+  }
+
+  // ── RENDERIZAR TABLA ──
+  function renderTable() {
+    const tbody = document.getElementById("table-body");
+    tbody.innerHTML = "";
+
+    let priced = 0;
+
+    products.forEach(p => {
+      const wp  = prices[p.id];
+      if (wp)   priced++;
+
+      const tr  = document.createElement("tr");
+      tr.innerHTML = `
+        <td><img class="product-thumb" src="${p.image || ''}" alt="" loading="lazy" /></td>
+        <td>
+          <div class="product-name">${p.name}</div>
+          <div class="product-vars">
+            ${p.colors?.join(", ") || "—"} &nbsp;·&nbsp; Talles: ${p.sizes?.join(", ") || "—"}
+          </div>
+        </td>
+        <td class="retail-price">${p.retailPrice ? fmt(p.retailPrice) : "—"}</td>
+        <td>
+          <input
+            type="number" class="price-input ${wp ? 'set' : 'unset'}"
+            id="price-${p.id}"
+            value="${wp || ''}"
+            placeholder="Sin precio"
+            min="0" step="100"
+            onchange="onPriceChange('${p.id}', this)"
+          />
+        </td>
+        <td>
+          ${wp
+            ? `<span class="has-price">✓ ${fmt(wp)}</span>`
+            : `<span class="no-price">Sin asignar</span>`
+          }
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const missing = products.length - priced;
+    document.getElementById("stat-total").textContent   = products.length;
+    document.getElementById("stat-priced").textContent  = priced;
+    document.getElementById("stat-missing").textContent = missing;
+    document.getElementById("loading").style.display       = "none";
+    document.getElementById("products-table").style.display = "";
+  }
+
+  function onPriceChange(id, input) {
+    const val = parseFloat(input.value);
+    if (val > 0) {
+      prices[id] = val;
+      input.classList.add("set");
+      input.classList.remove("unset");
+      // Actualizar estado en la fila
+      const td = input.closest("tr").querySelector("td:last-child");
+      if (td) td.innerHTML = `<span class="has-price">✓ ${fmt(val)}</span>`;
+    } else {
+      delete prices[id];
+      input.classList.add("unset");
+      input.classList.remove("set");
+      const td = input.closest("tr").querySelector("td:last-child");
+      if (td) td.innerHTML = `<span class="no-price">Sin asignar</span>`;
+    }
+    updateStats();
+  }
+
+  function updateStats() {
+    const priced  = Object.keys(prices).length;
+    const missing = products.length - priced;
+    document.getElementById("stat-priced").textContent  = priced;
+    document.getElementById("stat-missing").textContent = missing;
+  }
+
+  // ── GUARDAR PRECIOS ──
+  async function savePrices() {
+    const btn = document.getElementById("btn-save");
+    btn.disabled = true;
+    btn.textContent = "Guardando...";
+
+    // Leer todos los inputs por si hubo cambios manuales no capturados
+    products.forEach(p => {
+      const input = document.getElementById(`price-${p.id}`);
+      if (!input) return;
+      const val = parseFloat(input.value);
+      if (val > 0) prices[p.id] = val;
+      else delete prices[p.id];
+    });
+
+    try {
+      const res = await fetch("/api/prices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: adminPassword, prices }),
+      });
+      if (res.ok) {
+        showStatus("✓ Precios guardados correctamente", "ok");
+      } else {
+        const err = await res.json();
+        showStatus("Error: " + err.error, "err");
+      }
+    } catch (e) {
+      showStatus("Error de conexión: " + e.message, "err");
+    }
+    btn.disabled = false;
+    btn.textContent = "✓ Guardar precios";
+  }
+
+  // ── SINCRONIZAR PRODUCTOS ──
+  async function syncProducts() {
+    const btn = document.getElementById("btn-sync");
+    btn.disabled = true;
+    btn.textContent = "Sincronizando...";
+    showStatus("Sincronizando con Tiendanube, puede tardar unos segundos...", "inf");
+
+    try {
+      const res = await fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: adminPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showStatus(`✓ ${data.count} productos sincronizados`, "ok");
+        await loadData();
+      } else {
+        showStatus("Error: " + data.error, "err");
+      }
+    } catch (e) {
+      showStatus("Error de conexión: " + e.message, "err");
+    }
+    btn.disabled = false;
+    btn.textContent = "↻ Sincronizar productos";
+  }
+
+  function fmt(n) { return "$" + Number(n).toLocaleString("es-AR"); }
+
+  function showStatus(msg, type) {
+    const el = document.getElementById("status-bar");
+    el.textContent = msg;
+    el.className = type;
+    if (type === "ok") setTimeout(() => { el.className = ""; }, 4000);
+  }
+</script>
+</body>
+</html>

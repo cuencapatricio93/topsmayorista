@@ -135,25 +135,11 @@ async function scrapeProductDetail(url) {
     const priceText    = $(".product-price, .js-price-display, .price").first().text().trim();
     result.retailPrice = parseFloat(priceContent) || parsePriceARS(priceText);
 
-    // Número de artículo desde JSON-LD (Schema.org)
+    // Número de artículo desde la descripción visible (ej: "ART. 70/510" o "Artículo: 03/775300")
     let sku = "";
-    $('script[type="application/ld+json"]').each((_, el) => {
-      try {
-        const json = JSON.parse($(el).html());
-        if (json.sku) {
-          // Formato: "02/4215/i26*3*963" → tomar hasta el código de temporada (/i o /v)
-          const raw = String(json.sku).split("*")[0].trim();
-          sku = raw.replace(/\/(i|v)\d+.*$/i, "").trim();
-          return false;
-        }
-      } catch { /* ignorar */ }
-    });
-    // Fallback: buscar en la descripción
-    if (!sku) {
-      const descText = $("[itemprop='description'], .product-description").text();
-      const artMatch = descText.match(/[Aa]rt[íi]culo[:\s]+([^\s\n,<]+)/);
-      if (artMatch) sku = artMatch[1].trim();
-    }
+    const fullText = $.text();
+    const artMatch = fullText.match(/[Aa][Rr][Tt][íi]?culo?\.?\s*[:\s]\s*([A-Za-z0-9\/\-]+)/);
+    if (artMatch) sku = artMatch[1].trim();
     result.sku = sku;
 
     // Variantes desde LS.variants (Tiendanube: option0=color, option1=talle)

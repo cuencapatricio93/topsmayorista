@@ -135,11 +135,13 @@ async function scrapeProductDetail(url) {
     const priceText    = $(".product-price, .js-price-display, .price").first().text().trim();
     result.retailPrice = parseFloat(priceContent) || parsePriceARS(priceText);
 
-    // Número de artículo desde la descripción visible (ej: "ART. 70/510" o "Artículo: 03/775300")
+    // Número de artículo desde LS.variants (el más confiable, es el producto actual)
     let sku = "";
-    const fullText = $.text();
-    const artMatch = fullText.match(/[Aa][Rr][Tt][íi]?culo?\.?\s*[:\s]\s*([A-Za-z0-9\/\-]+)/);
-    if (artMatch) sku = artMatch[1].trim();
+    const varSkuMatch = html.match(/LS\.variants\s*=\s*\[[\s\S]*?"sku"\s*:\s*"([^"]+)"/);
+    if (varSkuMatch) {
+      const raw = varSkuMatch[1];
+      sku = raw.replace(/\/(i|v)\d+.*$/i, "").replace(/\*.*$/, "").trim();
+    }
     result.sku = sku;
 
     // Variantes desde LS.variants (Tiendanube: option0=color, option1=talle)

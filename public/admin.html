@@ -266,7 +266,10 @@
       tr.innerHTML = `
         <td><img class="product-thumb" src="${p.image || ''}" alt="" loading="lazy" /></td>
         <td>
-          <div class="product-name">${p.name}</div>
+          <div class="product-name">
+            ${p.name}
+            ${p.sku ? `<span style="font-weight:400;color:var(--muted);font-size:.75rem"> · Art. ${p.sku}</span>` : ""}
+          </div>
           <div class="product-vars">
             ${p.colors?.join(", ") || "—"} &nbsp;·&nbsp; Talles: ${p.sizes?.join(", ") || "—"}
           </div>

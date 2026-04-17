@@ -282,6 +282,19 @@ app.post("/api/conditions", async (req, res) => {
   res.json({ ok: true });
 });
 
+// Proxy de imágenes para html2canvas (evita CORS con CDN de Tiendanube)
+app.get("/api/img", async (req, res) => {
+  const url = req.query.url;
+  if (!url || !url.startsWith("http")) return res.status(400).end();
+  try {
+    const r = await fetch(url);
+    const buf = await r.arrayBuffer();
+    res.setHeader("Content-Type", r.headers.get("content-type") || "image/jpeg");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.send(Buffer.from(buf));
+  } catch { res.status(500).end(); }
+});
+
 app.post("/api/sync", async (req, res) => {
   if (req.body.password !== ADMIN_PASS) return res.status(401).json({ error: "Sin autorización" });
   try {

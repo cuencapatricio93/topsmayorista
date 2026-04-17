@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pedido Mayorista — Tops</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -170,6 +171,40 @@
     .btn-wsp { width: 100%; padding: 16px; background: #25D366; color: #fff; border: none; font-family: 'Montserrat', sans-serif; font-size: .8rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 4px; }
     .btn-wsp:hover { background: #1ebe5d; }
 
+    /* MODAL IMAGEN PEDIDO */
+    #img-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+    #img-overlay.open { display: flex; }
+    #img-modal { background: #fff; max-width: 520px; width: 100%; max-height: 90vh; overflow-y: auto; }
+    .img-modal-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .img-modal-head h3 { font-size: .75rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+    #img-preview { display: block; width: 100%; }
+    .img-modal-foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+    .btn-dl { flex: 1; padding: 13px; background: var(--dark); color: #fff; border: none; font-family: 'Montserrat', sans-serif; font-size: .72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; }
+    .btn-dl:hover { background: #222; }
+
+    /* RECIBO (oculto, solo para captura) */
+    #receipt {
+      position: fixed; top: -9999px; left: -9999px;
+      width: 480px; background: #fff;
+      font-family: Arial, sans-serif; font-size: 13px; color: #222;
+    }
+    .rc-head { background: #3F3D38; color: #fff; padding: 20px 24px; }
+    .rc-head .brand { font-size: 22px; font-weight: 700; letter-spacing: 5px; text-transform: uppercase; }
+    .rc-head .sub { font-size: 11px; color: #e58e55; letter-spacing: 2px; text-transform: uppercase; margin-top: 3px; }
+    .rc-info { padding: 14px 24px; background: #f9f7f5; border-bottom: 1px solid #e5e5e5; font-size: 12px; }
+    .rc-info b { color: #3F3D38; }
+    .rc-item { display: flex; gap: 14px; padding: 14px 24px; border-bottom: 1px solid #e5e5e5; align-items: flex-start; }
+    .rc-item img { width: 72px; height: 90px; object-fit: cover; flex-shrink: 0; display: block; }
+    .rc-item-info { flex: 1; }
+    .rc-item-name { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
+    .rc-item-art { font-size: 11px; color: #e58e55; font-weight: 700; margin-bottom: 6px; }
+    .rc-item-row { font-size: 11px; color: #555; line-height: 1.7; }
+    .rc-item-sub { font-size: 13px; font-weight: 700; color: #e58e55; margin-top: 6px; }
+    .rc-total { padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #3F3D38; }
+    .rc-total .lbl { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #888; }
+    .rc-total .val { font-size: 20px; font-weight: 700; color: #e58e55; }
+    .rc-foot { background: #e58e55; color: #fff; text-align: center; padding: 12px; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+
     /* TOAST */
     #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--dark); color: #fff; padding: 12px 24px; font-size: .76rem; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .3s; white-space: nowrap; z-index: 9998; }
     #toast.show { opacity: 1; }
@@ -284,7 +319,10 @@
       </tfoot>
     </table>
 
-    <button class="btn-finalizar" onclick="toggleForm()">Finalizar pedido →</button>
+    <div style="display:flex;gap:10px;margin:16px 20px">
+      <button class="btn-finalizar" style="margin:0;flex:1" onclick="toggleForm()">Finalizar pedido →</button>
+      <button class="btn-finalizar" style="margin:0;background:#555;flex:0 0 auto;padding:16px 18px" title="Generar imagen del pedido" onclick="generarImagen()">🖼</button>
+    </div>
 
     <!-- FORMULARIO (oculto hasta que se toca Finalizar) -->
     <div id="checkout-form" style="display:none">
@@ -343,6 +381,23 @@
   </div>
   <button class="float-btn" onclick="openOrderModal()">Ver pedido →</button>
 </div>
+
+<!-- MODAL PREVIA IMAGEN -->
+<div id="img-overlay" onclick="closeImgModal(event)">
+  <div id="img-modal">
+    <div class="img-modal-head">
+      <h3>Imagen del pedido</h3>
+      <button style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#888" onclick="document.getElementById('img-overlay').classList.remove('open')">✕</button>
+    </div>
+    <img id="img-preview" alt="pedido" />
+    <div class="img-modal-foot">
+      <button class="btn-dl" onclick="downloadImg()">Descargar imagen</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECIBO OCULTO para captura -->
+<div id="receipt"></div>
 
 <div id="toast"></div>
 <footer>Tops Zapatos &copy; 2026 &nbsp;·&nbsp; Solo para revendedores</footer>
@@ -681,6 +736,101 @@
     ].filter(Boolean).join("\n");
 
     window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank");
+  }
+
+  // ── IMAGEN DEL PEDIDO ──
+  let imgDataUrl = null;
+
+  async function generarImagen() {
+    if (!cart.length) { alert("Agregá al menos un producto primero."); return; }
+
+    toast("Generando imagen...");
+
+    // Agrupar items por producto
+    const byPid = {};
+    cart.forEach(item => {
+      if (!byPid[item.pid]) byPid[item.pid] = { name: item.name, image: item.image, items: [] };
+      byPid[item.pid].items.push(item);
+    });
+
+    // Buscar SKU de cada producto
+    const skuMap = {};
+    products.forEach(p => { if (p.sku) skuMap[p.id] = p.sku; });
+
+    const grand = cart.reduce((a, c) => a + c.price * c.qty, 0);
+    const name  = document.getElementById("f-name")?.value.trim() || "";
+    const envioVal = document.querySelector('input[name="envio"]:checked')?.value;
+    const zona  = document.getElementById("f-zona")?.value.trim() || "";
+    const entregaText = envioVal === "retiro" ? "Retiro por local - Argerich 539"
+                                               : `Envio a domicilio - ${zona}`;
+
+    // Construir HTML del recibo
+    const rows = Object.values(byPid).map(p => {
+      const imgSrc = p.image ? `/api/img?url=${encodeURIComponent(p.image)}` : "";
+      const sku    = skuMap[Object.keys(byPid).find(k => byPid[k] === p)] || "";
+      const lines  = p.items.map(it =>
+        `<div class="rc-item-row">${it.color} / Talle ${it.size} &nbsp;x${it.qty}&nbsp; <b>${fmt(it.price * it.qty)}</b></div>`
+      ).join("");
+      const sub = p.items.reduce((a, it) => a + it.price * it.qty, 0);
+      return `
+        <div class="rc-item">
+          ${imgSrc ? `<img src="${imgSrc}" crossorigin="anonymous" />` : ""}
+          <div class="rc-item-info">
+            <div class="rc-item-name">${p.name}</div>
+            ${sku ? `<div class="rc-item-art">Art. ${sku}</div>` : ""}
+            ${lines}
+            <div class="rc-item-sub">${fmt(sub)}</div>
+          </div>
+        </div>`;
+    }).join("");
+
+    const now = new Date().toLocaleDateString("es-AR", { day:"2-digit", month:"2-digit", year:"numeric" });
+
+    document.getElementById("receipt").innerHTML = `
+      <div class="rc-head">
+        <div class="brand">Tops</div>
+        <div class="sub">Prepedido Mayorista</div>
+      </div>
+      <div class="rc-info">
+        <div>${now}${name ? ` &nbsp;·&nbsp; <b>${name}</b>` : ""}</div>
+        <div style="margin-top:3px;color:#888">${entregaText}</div>
+      </div>
+      ${rows}
+      <div class="rc-total">
+        <span class="lbl">Total del pedido</span>
+        <span class="val">${fmt(grand)}</span>
+      </div>
+      <div class="rc-foot">Tops Zapatos &nbsp;·&nbsp; Solo para revendedores</div>
+    `;
+
+    const receipt = document.getElementById("receipt");
+    receipt.style.top  = "-9999px";
+    receipt.style.left = "-9999px";
+
+    try {
+      const canvas = await html2canvas(receipt, {
+        useCORS: true, scale: 2, backgroundColor: "#fff",
+        logging: false, allowTaint: false,
+      });
+      imgDataUrl = canvas.toDataURL("image/png");
+      document.getElementById("img-preview").src = imgDataUrl;
+      document.getElementById("img-overlay").classList.add("open");
+    } catch (e) {
+      alert("No se pudo generar la imagen. Tomá una captura de pantalla del pedido.");
+    }
+  }
+
+  function downloadImg() {
+    if (!imgDataUrl) return;
+    const a = document.createElement("a");
+    a.href = imgDataUrl;
+    a.download = "prepedido-tops.png";
+    a.click();
+  }
+
+  function closeImgModal(e) {
+    if (e.target === document.getElementById("img-overlay"))
+      document.getElementById("img-overlay").classList.remove("open");
   }
 
   function toast(msg) {

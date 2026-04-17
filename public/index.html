@@ -46,7 +46,11 @@
     .order-table tr.row-total td { border-top: 2px solid var(--dark); border-bottom: none; font-size: .78rem; font-weight: 700; padding-top: 10px; }
     .order-table tr.row-total td.td-color { text-transform: uppercase; letter-spacing: 1px; }
     .order-table tr.row-total td.td-sub { color: var(--orange); font-size: .9rem; }
-    .qty-cell { width: 42px; padding: 6px 3px; border: 1px solid var(--border); font-family: 'Montserrat', sans-serif; font-size: .8rem; font-weight: 600; text-align: center; outline: none; -moz-appearance: textfield; transition: border-color .15s; }
+    .qty-wrap { display: flex; align-items: center; justify-content: center; gap: 3px; }
+    .qty-btn { width: 26px; height: 30px; border: 1px solid var(--border); background: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--dark); transition: background .15s, border-color .15s; flex-shrink: 0; line-height: 1; padding: 0; }
+    .qty-btn:hover { background: var(--soft); border-color: var(--dark); }
+    .qty-btn.plus:hover { background: var(--orange); border-color: var(--orange); color: #fff; }
+    .qty-cell { width: 34px; padding: 4px 2px; border: 1px solid var(--border); font-family: 'Montserrat', sans-serif; font-size: .82rem; font-weight: 700; text-align: center; outline: none; -moz-appearance: textfield; transition: border-color .15s; }
     .qty-cell::-webkit-outer-spin-button, .qty-cell::-webkit-inner-spin-button { -webkit-appearance: none; }
     .qty-cell:focus { border-color: var(--dark); }
     .qty-cell.active { background: #fff8f0; border-color: var(--orange); }
@@ -294,7 +298,7 @@
 <footer>Tops Zapatos &copy; 2026 &nbsp;·&nbsp; Solo para revendedores</footer>
 
 <script>
-  const WHATSAPP = "5491161331081";
+  const WHATSAPP = "5491121625499";
   let products = [];
   let cart     = [];
   let activeP  = null;
@@ -413,8 +417,14 @@
       tr.innerHTML = `
         <td class="td-color">${color}</td>
         ${(activeP.sizes || []).map(s => `
-          <td><input type="number" class="qty-cell" id="q_${pid}_${sc}_${s}"
-            min="0" value="0" oninput="onInput(this,'${pid}')" /></td>
+          <td>
+            <div class="qty-wrap">
+              <button class="qty-btn" onclick="stepQty('${pid}','${sc}','${s}',-1)" type="button">−</button>
+              <input type="number" class="qty-cell" id="q_${pid}_${sc}_${s}"
+                min="0" value="0" oninput="onInput(this,'${pid}')" />
+              <button class="qty-btn plus" onclick="stepQty('${pid}','${sc}','${s}',1)" type="button">+</button>
+            </div>
+          </td>
         `).join("")}
         <td class="td-sub" id="rsub_${pid}_${sc}">—</td>
       `;
@@ -443,6 +453,15 @@
   }
   function closeModalOutside(e) {
     if (e.target === document.getElementById("modal-overlay")) closeModal();
+  }
+
+  function stepQty(pid, sc, s, delta) {
+    const input = document.getElementById(`q_${pid}_${sc}_${s}`);
+    if (!input) return;
+    const newVal = Math.max(0, (parseInt(input.value) || 0) + delta);
+    input.value = newVal;
+    input.classList.toggle("active", newVal > 0);
+    recalc(pid);
   }
 
   function onInput(input, pid) {

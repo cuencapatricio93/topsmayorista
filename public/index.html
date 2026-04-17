@@ -140,6 +140,7 @@
     .cart-table tr.cart-total td.r { font-size: 1rem; }
     .rm-btn { background: none; border: none; color: #ccc; cursor: pointer; font-size: .9rem; padding: 0 4px; }
     .rm-btn:hover { color: #c0392b; }
+    .cart-thumb { width: 52px; height: 65px; object-fit: cover; display: block; }
     .btn-finalizar { display: block; width: calc(100% - 40px); margin: 16px 20px; padding: 16px; background: var(--black); color: #fff; border: none; font-family: 'Montserrat', sans-serif; font-size: .8rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; }
     .btn-finalizar:hover { background: #222; }
 
@@ -269,7 +270,7 @@
     <table class="cart-table">
       <thead>
         <tr>
-          <th>Producto</th><th>Color / Talle</th>
+          <th></th><th>Producto</th><th>Color / Talle</th>
           <th class="r">Cant.</th><th class="r">Subtotal</th><th></th>
         </tr>
       </thead>
@@ -412,7 +413,7 @@
     }
   }
 
-  function fmt(n) { return "$" + Number(n).toLocaleString("es-AR"); }
+  function fmt(n) { return "$" + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
 
   // ── RENDER GRILLA PRODUCTOS ──
   function renderGrid() {
@@ -574,7 +575,7 @@
         added = true;
         const existing = cart.find(c => c.pid === p.id && c.color === color && c.size === s);
         if (existing) existing.qty += qty;
-        else cart.push({ pid: p.id, name: p.name, color, size: s, qty, price: p.wholesalePrice });
+        else cart.push({ pid: p.id, name: p.name, image: p.image || "", color, size: s, qty, price: p.wholesalePrice });
       });
     });
 
@@ -610,6 +611,7 @@
       grand += sub;
       const tr = document.createElement("tr");
       tr.innerHTML = `
+        <td style="padding:6px 10px"><img class="cart-thumb" src="${item.image}" alt="" /></td>
         <td style="font-weight:600">${item.name}</td>
         <td style="color:var(--muted)">${item.color} / ${item.size}</td>
         <td class="r">${item.qty}</td>
@@ -649,8 +651,8 @@
     if (envioVal === "envio" && !zona) { alert("Indicá tu zona para el envío."); return; }
 
     const entrega = envioVal === "retiro"
-      ? "📍 *Retiro por local* — Argerich 539"
-      : `🚚 *Envío a domicilio* — ${zona} (a convenir)`;
+      ? "Retiro por local - Argerich 539"
+      : `Envio a domicilio - ${zona} (a convenir)`;
 
     const byProduct = {};
     let grand = 0;
@@ -665,17 +667,17 @@
       items.forEach(item => {
         const sub = item.price * item.qty;
         grand += sub;
-        lines.push(`  • ${item.color} / Talle ${item.size} × ${item.qty} — ${fmt(sub)}`);
+        lines.push(`  - ${item.color} / Talle ${item.size} x${item.qty} - ${fmt(sub)}`);
       });
     });
 
     const msg = [
-      "👟 *PREPEDIDO MAYORISTA — Tops*", "",
-      `👤 *${name}*`,
-      entrega,
+      "*PREPEDIDO MAYORISTA - Tops*", "",
+      `Cliente: *${name}*`,
+      `Entrega: ${entrega}`,
       "", ...lines, "",
-      `💰 *TOTAL: ${fmt(grand)}*`,
-      notes ? `\n📝 ${notes}` : "",
+      `*TOTAL: ${fmt(grand)}*`,
+      notes ? `Notas: ${notes}` : "",
     ].filter(Boolean).join("\n");
 
     window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank");

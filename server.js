@@ -236,6 +236,8 @@ async function getProducts(forceRefresh = false) {
 }
 
 // ── RUTAS ──────────────────────────────────────────────────────────────────────
+app.get("/admin", (req, res) => res.redirect("/admin.html"));
+
 app.post("/api/auth/catalog", (req, res) => {
   if (req.body.password === CATALOG_PASS) return res.json({ ok: true });
   res.status(401).json({ error: "Contraseña incorrecta" });

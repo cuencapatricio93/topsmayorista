@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pedido Mayorista — Tops</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -171,29 +170,6 @@
     .btn-wsp { width: 100%; padding: 16px; background: #25D366; color: #fff; border: none; font-family: 'Montserrat', sans-serif; font-size: .8rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 4px; }
     .btn-wsp:hover { background: #1ebe5d; }
 
-
-    /* RECIBO (oculto, solo para captura) */
-    #receipt {
-      position: fixed; top: -9999px; left: -9999px;
-      width: 480px; background: #fff;
-      font-family: Arial, sans-serif; font-size: 13px; color: #222;
-    }
-    .rc-head { background: #3F3D38; color: #fff; padding: 20px 24px; }
-    .rc-head .brand { font-size: 22px; font-weight: 700; letter-spacing: 5px; text-transform: uppercase; }
-    .rc-head .sub { font-size: 11px; color: #e58e55; letter-spacing: 2px; text-transform: uppercase; margin-top: 3px; }
-    .rc-info { padding: 14px 24px; background: #f9f7f5; border-bottom: 1px solid #e5e5e5; font-size: 12px; }
-    .rc-info b { color: #3F3D38; }
-    .rc-item { display: flex; gap: 14px; padding: 14px 24px; border-bottom: 1px solid #e5e5e5; align-items: flex-start; }
-    .rc-item img { width: 72px; height: 90px; object-fit: cover; flex-shrink: 0; display: block; }
-    .rc-item-info { flex: 1; }
-    .rc-item-name { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
-    .rc-item-art { font-size: 11px; color: #e58e55; font-weight: 700; margin-bottom: 6px; }
-    .rc-item-row { font-size: 11px; color: #555; line-height: 1.7; }
-    .rc-item-sub { font-size: 13px; font-weight: 700; color: #e58e55; margin-top: 6px; }
-    .rc-total { padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #3F3D38; }
-    .rc-total .lbl { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #888; }
-    .rc-total .val { font-size: 20px; font-weight: 700; color: #e58e55; }
-    .rc-foot { background: #e58e55; color: #fff; text-align: center; padding: 12px; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
 
     /* TOAST */
     #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--dark); color: #fff; padding: 12px 24px; font-size: .76rem; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .3s; white-space: nowrap; z-index: 9998; }
@@ -368,9 +344,6 @@
   </div>
   <button class="float-btn" onclick="openOrderModal()">Ver pedido →</button>
 </div>
-
-<!-- RECIBO OCULTO para captura -->
-<div id="receipt"></div>
 
 <div id="toast"></div>
 <footer>Tops Zapatos &copy; 2026 &nbsp;·&nbsp; Solo para revendedores</footer>
@@ -668,7 +641,7 @@
   }
 
   // ── WHATSAPP ──
-  async function sendWhatsApp() {
+  function sendWhatsApp() {
     const name  = document.getElementById("f-name").value.trim();
     const notes = document.getElementById("f-notes").value.trim();
     const envioVal = document.querySelector('input[name="envio"]:checked')?.value;
@@ -708,79 +681,9 @@
       notes ? `Notas: ${notes}` : "",
     ].filter(Boolean).join("\n");
 
-    // Abrir WhatsApp con el texto
     window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank");
-
-    // Generar y descargar la imagen silenciosamente
-    toast("Generando imagen del pedido...");
-    const blob = await generarImagenBlob(name, entrega.replace(/\*/g,""));
-    if (blob) {
-      const url = URL.createObjectURL(blob);
-      const a   = document.createElement("a");
-      a.href     = url;
-      a.download = "prepedido-tops.png";
-      a.click();
-      URL.revokeObjectURL(url);
-      toast("Imagen descargada - adjuntala en WhatsApp");
-    }
   }
 
-  // ── IMAGEN DEL PEDIDO (silenciosa) ──
-  async function generarImagenBlob(name, entregaText) {
-    const byPid = {};
-    cart.forEach(item => {
-      if (!byPid[item.pid]) byPid[item.pid] = { name: item.name, image: item.image, items: [] };
-      byPid[item.pid].items.push(item);
-    });
-    const skuMap = {};
-    products.forEach(p => { if (p.sku) skuMap[p.id] = p.sku; });
-
-    const grand = cart.reduce((a, c) => a + c.price * c.qty, 0);
-    const now   = new Date().toLocaleDateString("es-AR", { day:"2-digit", month:"2-digit", year:"numeric" });
-
-    const rows = Object.values(byPid).map(p => {
-      const imgSrc = p.image ? `/api/img?url=${encodeURIComponent(p.image)}` : "";
-      const sku    = skuMap[Object.keys(byPid).find(k => byPid[k] === p)] || "";
-      const lines  = p.items.map(it =>
-        `<div class="rc-item-row">${it.color} / Talle ${it.size} &nbsp;x${it.qty}&nbsp; <b>${fmt(it.price * it.qty)}</b></div>`
-      ).join("");
-      const sub = p.items.reduce((a, it) => a + it.price * it.qty, 0);
-      return `
-        <div class="rc-item">
-          ${imgSrc ? `<img src="${imgSrc}" crossorigin="anonymous" />` : ""}
-          <div class="rc-item-info">
-            <div class="rc-item-name">${p.name}</div>
-            ${sku ? `<div class="rc-item-art">Art. ${sku}</div>` : ""}
-            ${lines}
-            <div class="rc-item-sub">${fmt(sub)}</div>
-          </div>
-        </div>`;
-    }).join("");
-
-    document.getElementById("receipt").innerHTML = `
-      <div class="rc-head">
-        <div class="brand">Tops</div>
-        <div class="sub">Prepedido Mayorista</div>
-      </div>
-      <div class="rc-info">
-        <div>${now}${name ? ` &nbsp;&middot;&nbsp; <b>${name}</b>` : ""}</div>
-        <div style="margin-top:3px;color:#888">${entregaText}</div>
-      </div>
-      ${rows}
-      <div class="rc-total">
-        <span class="lbl">Total del pedido</span>
-        <span class="val">${fmt(grand)}</span>
-      </div>
-      <div class="rc-foot">Tops Zapatos &nbsp;&middot;&nbsp; Solo para revendedores</div>
-    `;
-
-    try {
-      const canvas = await html2canvas(document.getElementById("receipt"), {
-        useCORS: true, scale: 2, backgroundColor: "#fff", logging: false,
-      });
-      return await new Promise(res => canvas.toBlob(res, "image/png"));
-    } catch { return null; }
-  }
 
   function toast(msg) {
     const t = document.getElementById("toast");

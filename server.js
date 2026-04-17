@@ -32,7 +32,13 @@ async function redisGet(key) {
       headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
     });
     const data = await res.json();
-    return data.result !== null ? JSON.parse(data.result) : null;
+    if (data.result === null || data.result === undefined) return null;
+    const parsed = JSON.parse(data.result);
+    // Si era un string (datos viejos con doble encode), parsear de nuevo
+    if (typeof parsed === "string") {
+      try { return JSON.parse(parsed); } catch { return parsed; }
+    }
+    return parsed;
   } catch { return null; }
 }
 
@@ -42,7 +48,7 @@ async function redisSet(key, value) {
     await fetch(`${REDIS_URL}/set/${key}`, {
       method:  "POST",
       headers: { Authorization: `Bearer ${REDIS_TOKEN}`, "Content-Type": "application/json" },
-      body:    JSON.stringify(JSON.stringify(value)),
+      body:    JSON.stringify(value),
     });
   } catch { /* silencioso */ }
 }

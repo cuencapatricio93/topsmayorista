@@ -171,16 +171,6 @@
     .btn-wsp { width: 100%; padding: 16px; background: #25D366; color: #fff; border: none; font-family: 'Montserrat', sans-serif; font-size: .8rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 4px; }
     .btn-wsp:hover { background: #1ebe5d; }
 
-    /* MODAL IMAGEN PEDIDO */
-    #img-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
-    #img-overlay.open { display: flex; }
-    #img-modal { background: #fff; max-width: 520px; width: 100%; max-height: 90vh; overflow-y: auto; }
-    .img-modal-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    .img-modal-head h3 { font-size: .75rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
-    #img-preview { display: block; width: 100%; }
-    .img-modal-foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
-    .btn-dl { flex: 1; padding: 13px; background: var(--dark); color: #fff; border: none; font-family: 'Montserrat', sans-serif; font-size: .72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; }
-    .btn-dl:hover { background: #222; }
 
     /* RECIBO (oculto, solo para captura) */
     #receipt {
@@ -319,10 +309,7 @@
       </tfoot>
     </table>
 
-    <div style="display:flex;gap:10px;margin:16px 20px">
-      <button class="btn-finalizar" style="margin:0;flex:1" onclick="toggleForm()">Finalizar pedido →</button>
-      <button class="btn-finalizar" style="margin:0;background:#555;flex:0 0 auto;padding:16px 18px" title="Generar imagen del pedido" onclick="generarImagen()">🖼</button>
-    </div>
+    <button class="btn-finalizar" onclick="toggleForm()">Finalizar pedido →</button>
 
     <!-- FORMULARIO (oculto hasta que se toca Finalizar) -->
     <div id="checkout-form" style="display:none">
@@ -380,20 +367,6 @@
     </div>
   </div>
   <button class="float-btn" onclick="openOrderModal()">Ver pedido →</button>
-</div>
-
-<!-- MODAL PREVIA IMAGEN -->
-<div id="img-overlay" onclick="closeImgModal(event)">
-  <div id="img-modal">
-    <div class="img-modal-head">
-      <h3>Imagen del pedido</h3>
-      <button style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#888" onclick="document.getElementById('img-overlay').classList.remove('open')">✕</button>
-    </div>
-    <img id="img-preview" alt="pedido" />
-    <div class="img-modal-foot">
-      <button class="btn-dl" onclick="downloadImg()">Descargar imagen</button>
-    </div>
-  </div>
 </div>
 
 <!-- RECIBO OCULTO para captura -->
@@ -695,7 +668,7 @@
   }
 
   // ── WHATSAPP ──
-  function sendWhatsApp() {
+  async function sendWhatsApp() {
     const name  = document.getElementById("f-name").value.trim();
     const notes = document.getElementById("f-notes").value.trim();
     const envioVal = document.querySelector('input[name="envio"]:checked')?.value;
@@ -735,36 +708,36 @@
       notes ? `Notas: ${notes}` : "",
     ].filter(Boolean).join("\n");
 
+    // Abrir WhatsApp con el texto
     window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank");
+
+    // Generar y descargar la imagen silenciosamente
+    toast("Generando imagen del pedido...");
+    const blob = await generarImagenBlob(name, entrega.replace(/\*/g,""));
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement("a");
+      a.href     = url;
+      a.download = "prepedido-tops.png";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast("Imagen descargada - adjuntala en WhatsApp");
+    }
   }
 
-  // ── IMAGEN DEL PEDIDO ──
-  let imgDataUrl = null;
-
-  async function generarImagen() {
-    if (!cart.length) { alert("Agregá al menos un producto primero."); return; }
-
-    toast("Generando imagen...");
-
-    // Agrupar items por producto
+  // ── IMAGEN DEL PEDIDO (silenciosa) ──
+  async function generarImagenBlob(name, entregaText) {
     const byPid = {};
     cart.forEach(item => {
       if (!byPid[item.pid]) byPid[item.pid] = { name: item.name, image: item.image, items: [] };
       byPid[item.pid].items.push(item);
     });
-
-    // Buscar SKU de cada producto
     const skuMap = {};
     products.forEach(p => { if (p.sku) skuMap[p.id] = p.sku; });
 
     const grand = cart.reduce((a, c) => a + c.price * c.qty, 0);
-    const name  = document.getElementById("f-name")?.value.trim() || "";
-    const envioVal = document.querySelector('input[name="envio"]:checked')?.value;
-    const zona  = document.getElementById("f-zona")?.value.trim() || "";
-    const entregaText = envioVal === "retiro" ? "Retiro por local - Argerich 539"
-                                               : `Envio a domicilio - ${zona}`;
+    const now   = new Date().toLocaleDateString("es-AR", { day:"2-digit", month:"2-digit", year:"numeric" });
 
-    // Construir HTML del recibo
     const rows = Object.values(byPid).map(p => {
       const imgSrc = p.image ? `/api/img?url=${encodeURIComponent(p.image)}` : "";
       const sku    = skuMap[Object.keys(byPid).find(k => byPid[k] === p)] || "";
@@ -784,15 +757,13 @@
         </div>`;
     }).join("");
 
-    const now = new Date().toLocaleDateString("es-AR", { day:"2-digit", month:"2-digit", year:"numeric" });
-
     document.getElementById("receipt").innerHTML = `
       <div class="rc-head">
         <div class="brand">Tops</div>
         <div class="sub">Prepedido Mayorista</div>
       </div>
       <div class="rc-info">
-        <div>${now}${name ? ` &nbsp;·&nbsp; <b>${name}</b>` : ""}</div>
+        <div>${now}${name ? ` &nbsp;&middot;&nbsp; <b>${name}</b>` : ""}</div>
         <div style="margin-top:3px;color:#888">${entregaText}</div>
       </div>
       ${rows}
@@ -800,37 +771,15 @@
         <span class="lbl">Total del pedido</span>
         <span class="val">${fmt(grand)}</span>
       </div>
-      <div class="rc-foot">Tops Zapatos &nbsp;·&nbsp; Solo para revendedores</div>
+      <div class="rc-foot">Tops Zapatos &nbsp;&middot;&nbsp; Solo para revendedores</div>
     `;
 
-    const receipt = document.getElementById("receipt");
-    receipt.style.top  = "-9999px";
-    receipt.style.left = "-9999px";
-
     try {
-      const canvas = await html2canvas(receipt, {
-        useCORS: true, scale: 2, backgroundColor: "#fff",
-        logging: false, allowTaint: false,
+      const canvas = await html2canvas(document.getElementById("receipt"), {
+        useCORS: true, scale: 2, backgroundColor: "#fff", logging: false,
       });
-      imgDataUrl = canvas.toDataURL("image/png");
-      document.getElementById("img-preview").src = imgDataUrl;
-      document.getElementById("img-overlay").classList.add("open");
-    } catch (e) {
-      alert("No se pudo generar la imagen. Tomá una captura de pantalla del pedido.");
-    }
-  }
-
-  function downloadImg() {
-    if (!imgDataUrl) return;
-    const a = document.createElement("a");
-    a.href = imgDataUrl;
-    a.download = "prepedido-tops.png";
-    a.click();
-  }
-
-  function closeImgModal(e) {
-    if (e.target === document.getElementById("img-overlay"))
-      document.getElementById("img-overlay").classList.remove("open");
+      return await new Promise(res => canvas.toBlob(res, "image/png"));
+    } catch { return null; }
   }
 
   function toast(msg) {

@@ -124,23 +124,30 @@
     .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--orange); border-radius: 50%; animation: spin .7s linear infinite; margin-right: 8px; vertical-align: middle; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* CART */
-    .cart-section { max-width: 760px; margin: 0 auto; padding: 0 24px 64px; }
-    .cart-box { border: 1px solid var(--border); }
-    .cart-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .cart-head h2 { font-size: .7rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; }
-    .cart-count { background: var(--orange); color: #fff; font-size: .68rem; font-weight: 700; padding: 3px 10px; letter-spacing: 1px; }
-    .cart-empty { padding: 28px; font-size: .82rem; color: var(--muted); text-align: center; }
-    #cart-content { display: none; }
+    /* ORDER MODAL */
+    #order-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: flex-end; justify-content: center; z-index: 997; }
+    #order-overlay.open { display: flex; }
+    #order-modal { background: #fff; width: 100%; max-width: 640px; max-height: 90vh; display: flex; flex-direction: column; }
+    .om-header { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .om-header h2 { font-size: .78rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+    .om-count { background: var(--orange); color: #fff; font-size: .68rem; font-weight: 700; padding: 3px 10px; letter-spacing: 1px; }
+    .om-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--muted); padding: 0 4px; }
+    .om-back { background: none; border: none; font-size: .75rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; color: var(--muted); padding: 0; display: flex; align-items: center; gap: 6px; }
+    .om-back:hover { color: var(--dark); }
+    .om-body { overflow-y: auto; flex: 1; }
+    .om-empty { padding: 40px 20px; text-align: center; font-size: .84rem; color: var(--muted); }
     .cart-table { width: 100%; border-collapse: collapse; }
-    .cart-table th { font-size: .62rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--soft); text-align: left; }
+    .cart-table th { font-size: .6rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--soft); text-align: left; }
     .cart-table th.r { text-align: right; }
-    .cart-table td { padding: 10px 14px; font-size: .8rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .cart-table td { padding: 10px 14px; font-size: .82rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
     .cart-table td.r { text-align: right; font-weight: 700; color: var(--orange); white-space: nowrap; }
     .cart-table tr.cart-total td { border-bottom: none; border-top: 2px solid var(--dark); font-weight: 700; padding-top: 14px; }
     .cart-table tr.cart-total td.r { font-size: 1rem; }
     .rm-btn { background: none; border: none; color: #ccc; cursor: pointer; font-size: .9rem; padding: 0 4px; }
     .rm-btn:hover { color: #c0392b; }
+    .om-footer { padding: 14px 20px; border-top: 1px solid var(--border); flex-shrink: 0; }
+    .btn-finalizar { width: 100%; padding: 15px; background: var(--black); color: #fff; border: none; font-family: 'Montserrat', sans-serif; font-size: .78rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; }
+    .btn-finalizar:hover { background: #222; }
 
     /* FORM */
     .form-wrap { padding: 24px 20px; border-top: 1px solid var(--border); }
@@ -256,65 +263,82 @@
   </div>
 </div>
 
-<div class="cart-section">
-  <div class="cart-box">
-    <div class="cart-head">
-      <h2>Tu Pedido</h2>
-      <span class="cart-count" id="cart-count">0 pares</span>
-    </div>
-    <div class="cart-empty" id="cart-empty">Todavía no agregaste productos.</div>
-    <div id="cart-content">
-      <table class="cart-table">
-        <thead>
-          <tr>
-            <th>Producto</th><th>Color / Talle</th>
-            <th class="r">Cant.</th><th class="r">Subtotal</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="cart-body"></tbody>
-        <tfoot>
-          <tr class="cart-total">
-            <td colspan="3" style="font-size:.72rem;letter-spacing:1px;text-transform:uppercase">Total del pedido</td>
-            <td class="r" id="cart-total"></td>
-            <td></td>
-          </tr>
-        </tfoot>
-      </table>
-      <div class="form-wrap">
-        <h3>Tus datos</h3>
-        <div class="form-row">
-          <label>Nombre</label>
-          <input type="text" id="f-name" placeholder="Tu nombre completo" />
-        </div>
+<!-- MODAL PEDIDO (2 pasos) -->
+<div id="order-overlay" onclick="closeOrderOutside(event)">
+  <div id="order-modal">
 
-        <div class="form-row">
-          <label>Entrega</label>
-          <div class="shipping-opts">
-            <label class="ship-opt">
-              <input type="radio" name="envio" value="retiro" checked onchange="toggleZona()" />
-              <div>
-                <div class="ship-opt-label">Retiro por local</div>
-                <div class="ship-opt-sub">Argerich 539</div>
-              </div>
-            </label>
-            <label class="ship-opt">
-              <input type="radio" name="envio" value="envio" onchange="toggleZona()" />
-              <div>
-                <div class="ship-opt-label">Envío a domicilio</div>
-                <div class="ship-opt-sub">Zona y costo a convenir</div>
-                <div id="zona-wrap">
-                  <input type="text" id="f-zona" placeholder="Indicá tu zona / localidad" onclick="event.stopPropagation()" />
+    <!-- PASO 1: resumen del pedido -->
+    <div id="order-step1">
+      <div class="om-header">
+        <h2>Tu pedido <span class="om-count" id="om-count">0 pares</span></h2>
+        <button class="om-close" onclick="closeOrderModal()">✕</button>
+      </div>
+      <div class="om-body">
+        <div class="om-empty" id="om-empty">Todavía no agregaste productos.</div>
+        <table class="cart-table" id="om-table" style="display:none">
+          <thead>
+            <tr>
+              <th>Producto</th><th>Color / Talle</th>
+              <th class="r">Cant.</th><th class="r">Subtotal</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="cart-body"></tbody>
+          <tfoot>
+            <tr class="cart-total">
+              <td colspan="3" style="font-size:.7rem;letter-spacing:1px;text-transform:uppercase">Total</td>
+              <td class="r" id="cart-total"></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="om-footer" id="om-footer1" style="display:none">
+        <button class="btn-finalizar" onclick="goToStep2()">Finalizar pedido →</button>
+      </div>
+    </div>
+
+    <!-- PASO 2: datos y entrega -->
+    <div id="order-step2" style="display:none">
+      <div class="om-header">
+        <button class="om-back" onclick="goToStep1()">← Volver</button>
+        <h2>Finalizar pedido</h2>
+        <button class="om-close" onclick="closeOrderModal()">✕</button>
+      </div>
+      <div class="om-body">
+        <div class="form-wrap" style="border-top:none">
+          <div class="form-row">
+            <label>Nombre</label>
+            <input type="text" id="f-name" placeholder="Tu nombre completo" />
+          </div>
+          <div class="form-row">
+            <label>Entrega</label>
+            <div class="shipping-opts">
+              <label class="ship-opt">
+                <input type="radio" name="envio" value="retiro" checked onchange="toggleZona()" />
+                <div>
+                  <div class="ship-opt-label">Retiro por local</div>
+                  <div class="ship-opt-sub">Argerich 539</div>
                 </div>
-              </div>
-            </label>
+              </label>
+              <label class="ship-opt">
+                <input type="radio" name="envio" value="envio" onchange="toggleZona()" />
+                <div>
+                  <div class="ship-opt-label">Envío a domicilio</div>
+                  <div class="ship-opt-sub">Zona y costo a convenir</div>
+                  <div id="zona-wrap">
+                    <input type="text" id="f-zona" placeholder="Indicá tu zona / localidad" onclick="event.stopPropagation()" />
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Notas (opcional)</label>
+            <textarea id="f-notes" placeholder="Consultas, preferencias..."></textarea>
           </div>
         </div>
-
-        <div class="form-row">
-          <label>Notas (opcional)</label>
-          <textarea id="f-notes" placeholder="Consultas, preferencias..."></textarea>
-        </div>
-
+      </div>
+      <div class="om-footer">
         <button class="btn-wsp" onclick="sendWhatsApp()">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
@@ -324,6 +348,7 @@
         </button>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -336,7 +361,7 @@
       <div class="float-total" id="float-total">$0</div>
     </div>
   </div>
-  <button class="float-btn" onclick="scrollToCart()">Ver pedido →</button>
+  <button class="float-btn" onclick="openOrderModal()">Ver pedido →</button>
 </div>
 
 <div id="toast"></div>
@@ -393,9 +418,26 @@
     set("cond-nota",    c.nota);
   }
 
-  // ── SCROLL AL CARRITO ──
-  function scrollToCart() {
-    document.querySelector(".cart-section").scrollIntoView({ behavior: "smooth", block: "start" });
+  // ── MODAL PEDIDO ──
+  function openOrderModal() {
+    goToStep1();
+    document.getElementById("order-overlay").classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+  function closeOrderModal() {
+    document.getElementById("order-overlay").classList.remove("open");
+    document.body.style.overflow = "";
+  }
+  function closeOrderOutside(e) {
+    if (e.target === document.getElementById("order-overlay")) closeOrderModal();
+  }
+  function goToStep1() {
+    document.getElementById("order-step1").style.display = "";
+    document.getElementById("order-step2").style.display = "none";
+  }
+  function goToStep2() {
+    document.getElementById("order-step1").style.display = "none";
+    document.getElementById("order-step2").style.display = "";
   }
 
   function fmt(n) { return "$" + Number(n).toLocaleString("es-AR"); }
@@ -576,23 +618,26 @@
   }
 
   function renderCart() {
-    const empty   = document.getElementById("cart-empty");
-    const content = document.getElementById("cart-content");
     const tbody   = document.getElementById("cart-body");
-    const count   = document.getElementById("cart-count");
-    const total   = document.getElementById("cart-total");
     const floatEl = document.getElementById("cart-float");
+    const omEmpty = document.getElementById("om-empty");
+    const omTable = document.getElementById("om-table");
+    const omFoot  = document.getElementById("om-footer1");
 
     tbody.innerHTML = "";
+
     if (!cart.length) {
-      empty.style.display   = "";
-      content.style.display = "none";
-      count.textContent     = "0 pares";
+      omEmpty.style.display = "";
+      omTable.style.display = "none";
+      omFoot.style.display  = "none";
       floatEl.classList.remove("visible");
+      document.getElementById("om-count").textContent = "0 pares";
       return;
     }
-    empty.style.display   = "none";
-    content.style.display = "";
+
+    omEmpty.style.display = "none";
+    omTable.style.display = "";
+    omFoot.style.display  = "";
 
     let grand = 0;
     cart.forEach((item, i) => {
@@ -610,11 +655,12 @@
     });
 
     const totalPairs = cart.reduce((a, c) => a + c.qty, 0);
-    count.textContent = `${totalPairs} par${totalPairs !== 1 ? "es" : ""}`;
-    total.textContent = fmt(grand);
+    const pairLabel  = `${totalPairs} par${totalPairs !== 1 ? "es" : ""}`;
+    document.getElementById("cart-total").textContent = fmt(grand);
+    document.getElementById("om-count").textContent   = pairLabel;
 
     // Carrito flotante
-    document.getElementById("float-count").textContent = `${totalPairs} par${totalPairs !== 1 ? "es" : ""}`;
+    document.getElementById("float-count").textContent = pairLabel;
     document.getElementById("float-total").textContent = fmt(grand);
     floatEl.classList.add("visible");
   }
